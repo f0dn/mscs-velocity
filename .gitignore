@@ -11,3 +11,5 @@ build
 .settings
 .factorypath
 .project
+
+app/bin
