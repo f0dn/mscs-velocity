@@ -6,6 +6,9 @@ import org.slf4j.Logger;
 
 import jakarta.inject.Inject;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -59,7 +62,37 @@ public class DomainRouterPlugin {
     }
 
     private List<Server> getMSCSBackends() {
-        // TODO
-        return List.of();
+        String[] command = { "mscs", "ls" };
+
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+
+        List<Server> servers = new ArrayList<>();
+
+        try {
+            Process process = processBuilder.start();
+
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
+
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(":");
+                    if (parts.length == 2) {
+                        String name = parts[0].trim();
+                        int port = Integer.parseInt(parts[1].trim());
+                        logger.debug("Found backend '{}' on port {}", name, port);
+                        servers.add(new Server(name, port));
+                    }
+                }
+            }
+
+            process.waitFor();
+        } catch (IOException e) {
+            logger.error("Error executing command: " + e.getMessage());
+        } catch (InterruptedException e) {
+            logger.error("The process was interrupted: " + e.getMessage());
+        }
+
+        return servers;
     }
 }
